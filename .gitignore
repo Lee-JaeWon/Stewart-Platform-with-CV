@@ -2,6 +2,12 @@
 # Created by https://www.toptal.com/developers/gitignore/api/visualstudio,c++,iarembeddedworkbench,iar_ewarm,iar,opencv
 # Edit at https://www.toptal.com/developers/gitignore?templates=visualstudio,c++,iarembeddedworkbench,iar_ewarm,iar,opencv
 
+### vs ###
+*.vcxproj.filters  
+*.vcxproj  
+*.vcxproj.user  
+
+
 ### C++ ###
 # Prerequisites
 *.d

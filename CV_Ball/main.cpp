@@ -1,63 +1,122 @@
-#include "CV_Ball.h"
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/videoio.hpp>
+#include <opencv2/highgui.hpp>
+#include <iostream>
 
-#include<iostream>
-#include<opencv2\core.hpp>
-#include<opencv\cv.h>
-#include<opencv2\highgui.hpp>
-#include<opencv2\imgproc.hpp>
-#include <opencv2/opencv.hpp>
-
-#include <windows.h>
+#define MAX 255
 
 using namespace cv;
 using namespace std;
 
-#define MAX 255
+void dummy(int, void*) {
 
-int main(int, char**)
+}
+
+int threshold1 = 30;
+
+Vec3b lower_blue1, upper_blue1, lower_blue2, upper_blue2, lower_blue3, upper_blue3;
+Mat img_color;
+
+void mouse_callback(int event, int x, int y, int flags, void* param)
 {
-	//VideoCapture cap(0);
-	VideoCapture cap(0, CAP_DSHOW);
-	cap.set(CV_CAP_PROP_FRAME_WIDTH, 720);
-	cap.set(CV_CAP_PROP_FRAME_HEIGHT, 720);
-	cap.set(CAP_PROP_FPS, 30);
+	if (event == EVENT_LBUTTONDOWN)
+	{
+		Vec3b color_pixel = img_color.at<Vec3b>(y, x);
 
-	//
-	cv::Mat img;
-	int thredshold;
+		Mat bgr_color = Mat(1, 1, CV_8UC3, color_pixel);
 
+
+		Mat hsv_color;
+		cvtColor(bgr_color, hsv_color, COLOR_BGR2HSV);
+
+		int hue = hsv_color.at<Vec3b>(0, 0)[0];
+		int saturation = hsv_color.at<Vec3b>(0, 0)[1];
+		int value = hsv_color.at<Vec3b>(0, 0)[2];
+
+		cout << "hue = " << hue << endl;
+		cout << "saturation = " << saturation << endl;
+		cout << "value = " << value << endl;
+
+
+		if (hue < 10)
+		{
+			cout << "case 1" << endl;
+			lower_blue1 = Vec3b(hue - 10 + 180, threshold1, threshold1);
+			upper_blue1 = Vec3b(180, 255, 255);
+			lower_blue2 = Vec3b(0, threshold1, threshold1);
+			upper_blue2 = Vec3b(hue, 255, 255);
+			lower_blue3 = Vec3b(hue, threshold1, threshold1);
+			upper_blue3 = Vec3b(hue + 10, 255, 255);
+		}
+		else if (hue > 170)
+		{
+			cout << "case 2" << endl;
+			lower_blue1 = Vec3b(hue, threshold1, threshold1);
+			upper_blue1 = Vec3b(180, 255, 255);
+			lower_blue2 = Vec3b(0, threshold1, threshold1);
+			upper_blue2 = Vec3b(hue + 10 - 180, 255, 255);
+			lower_blue3 = Vec3b(hue - 10, threshold1, threshold1);
+			upper_blue3 = Vec3b(hue, 255, 255);
+		}
+		else
+		{
+			cout << "case 3" << endl;
+			lower_blue1 = Vec3b(hue, threshold1, threshold1);
+			upper_blue1 = Vec3b(hue + 10, 255, 255);
+			lower_blue2 = Vec3b(hue - 10, threshold1, threshold1);
+			upper_blue2 = Vec3b(hue, 255, 255);
+			lower_blue3 = Vec3b(hue - 10, threshold1, threshold1);
+			upper_blue3 = Vec3b(hue, 255, 255);
+		}
+
+		cout << "hue = " << hue << endl;
+		cout << "#1 = " << lower_blue1 << "~" << upper_blue1 << endl;
+		cout << "#2 = " << lower_blue2 << "~" << upper_blue2 << endl;
+		cout << "#3 = " << lower_blue3 << "~" << upper_blue3 << endl;
+	}
+}
+
+
+
+int main()
+{
+	namedWindow("img_color");
+	setMouseCallback("img_color", mouse_callback);
 	//Trackbar
-	namedWindow("Image_res");
-	createTrackbar("thredshold", "Image_res", &thredshold, MAX);
-	setTrackbarPos("thredshold", "Image_res", 100);
+	createTrackbar("threshold", "img_color", &threshold1, MAX, dummy);
+	setTrackbarPos("threshold", "img_color", 30);
+
+	Mat img_hsv;
+
+	VideoCapture cap(0);
+	if (!cap.isOpened()) {
+		cout << "카메라를 열 수 없습니다." << endl;
+		return -1;
+	}
+
 
 	while (1)
 	{
-		thredshold = getTrackbarPos("thredshold", "Image_res");
+		cap.read(img_color);
 
-		cap >> img;
+		threshold1 = getTrackbarPos("threshold", "img_color");
 
-		//RGB to HSV
-		Mat img_hsv;
-		cvtColor(img, img_hsv, COLOR_BGR2HSV);
+		cvtColor(img_color, img_hsv, COLOR_BGR2HSV);
 
-		//Thresholding
-		Mat img_threshold;
-		threshold(img, img_threshold, MAX - thredshold, MAX, THRESH_BINARY);
+		Mat img_mask1, img_mask2, img_mask3, img_mask;
+		inRange(img_hsv, lower_blue1, upper_blue1, img_mask1);
+		inRange(img_hsv, lower_blue2, upper_blue2, img_mask2);
+		inRange(img_hsv, lower_blue3, upper_blue3, img_mask3);
+		img_mask = img_mask1 | img_mask2 | img_mask3;
 
-		//Erode, Dilate
-		Mat img_dilate;
-		Mat img_erode;
-		dilate(img_threshold, img_dilate, Mat::ones(Size(3, 3), CV_8UC1), Point(-1, -1));
-		erode(img_dilate, img_erode, Mat::ones(Size(3, 3), CV_8UC1), Point(-1, -1));
 
-		//to Bin
-		Mat img_gray;
-		cvtColor(img_erode, img_gray, COLOR_BGR2GRAY);
+		Mat img_result;
+		bitwise_and(img_color, img_color, img_result, img_mask);
 
 		//Labeling
 		Mat img_labels, stats, centroids;
-		int numOfLables = connectedComponentsWithStats(img_gray, img_labels, stats, centroids, 8, CV_32S);
+		int numOfLables = connectedComponentsWithStats(img_mask, img_labels, stats, centroids, 8, CV_32S);
 
 		// 레이블링 결과에 사각형 그리고, 넘버 표시하기
 		for (int j = 1; j < numOfLables; j++) {
@@ -66,25 +125,30 @@ int main(int, char**)
 			int top = stats.at<int>(j, CC_STAT_TOP);
 			int width = stats.at<int>(j, CC_STAT_WIDTH);
 			int height = stats.at<int>(j, CC_STAT_HEIGHT);
+			int radius = height / 2;
 
-			rectangle(img, Point(left, top), Point(left + width, top + height),
-				Scalar(0, 0, 255), 1);
+			int centerX = centroids.at<double>(j, 0);
+			int centerY = centroids.at<double>(j, 1);
 
-			putText(img, to_string(j), Point(left + 20, top + 20), FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 0, 0), 1);
+			if (area > 10000) { // 조절 //특정 조건 이상
+				circle(img_color, Point(centerX, centerY), radius, Scalar(0, 0, 255), 5);
+
+				putText(img_color, "detected", Point(left, top), FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 0, 0), 1);
+
+				cout << "Area : " << area << endl;
+				cout << "Center[x] : " << centerX << endl;
+				cout << "Center[y] : " << centerY << endl;
+			}
 		}
 
-		//Display
-		imshow("Image_res", img);
-		imshow("img_original", img);
-		imshow("img_hsv", img_hsv);
-		imshow("img_dilate", img_dilate);
-		imshow("img_erode", img_erode);
+		imshow("img_color", img_color);
+		imshow("img_mask", img_mask);
+		imshow("img_result", img_result);
 
-		cout << "numOfLables : " << numOfLables - 1 << endl;	// 최종 넘버링에서 1을 빼줘야 함
-
-		if (waitKey(10) == 27)
-			return 0;
+		if (waitKey(1) > 0)
+			break;
 	}
+
 
 	return 0;
 }

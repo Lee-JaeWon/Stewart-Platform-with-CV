@@ -13,10 +13,14 @@ void dummy(int, void*) {
 
 }
 
+//Variables(global)
 int threshold1 = 30;
-
 Vec3b lower_blue1, upper_blue1, lower_blue2, upper_blue2, lower_blue3, upper_blue3;
 Mat img_color;
+int target_CAM_X, target_CAM_Y;
+Point Target_pt, Center_pt;
+int centerX, centerY;
+
 
 void mouse_callback(int event, int x, int y, int flags, void* param)
 {
@@ -75,10 +79,14 @@ void mouse_callback(int event, int x, int y, int flags, void* param)
 		cout << "#2 = " << lower_blue2 << "~" << upper_blue2 << endl;
 		cout << "#3 = " << lower_blue3 << "~" << upper_blue3 << endl;
 	}
+	if (event == EVENT_RBUTTONDOWN) {
+		cout << "clicked x : " << x << " // clicked y : " << y << endl;
+		target_CAM_X = x;
+		target_CAM_Y = y;
+	}
 }
 
-
-
+//main
 int main()
 {
 	namedWindow("img_color");
@@ -89,12 +97,13 @@ int main()
 
 	Mat img_hsv;
 
-	VideoCapture cap(0);
+	VideoCapture cap(0, CAP_DSHOW);
+	cap.set(CV_CAP_PROP_FRAME_WIDTH, 720);
+	cap.set(CV_CAP_PROP_FRAME_HEIGHT, 720);
 	if (!cap.isOpened()) {
 		cout << "카메라를 열 수 없습니다." << endl;
 		return -1;
 	}
-
 
 	while (1)
 	{
@@ -127,20 +136,33 @@ int main()
 			int height = stats.at<int>(j, CC_STAT_HEIGHT);
 			int radius = height / 2;
 
-			int centerX = centroids.at<double>(j, 0);
-			int centerY = centroids.at<double>(j, 1);
+			centerX = centroids.at<double>(j, 0);
+			centerY = centroids.at<double>(j, 1);
 
-			if (area > 10000) { // 조절 //특정 조건 이상
+			if (area > 8000) { // 조절 //특정 조건 이상
 				circle(img_color, Point(centerX, centerY), radius, Scalar(0, 0, 255), 5);
+				circle(img_color, Point(centerX, centerY), 1, Scalar(0, 0, 255), 5);
+
 
 				putText(img_color, "detected", Point(left, top), FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 0, 0), 1);
 
-				cout << "Area : " << area << endl;
+				/*cout << "Area : " << area << endl;
 				cout << "Center[x] : " << centerX << endl;
-				cout << "Center[y] : " << centerY << endl;
+				cout << "Center[y] : " << centerY << endl;*/
+				Center_pt = Point(centerX, centerY);
 			}
-		}
 
+			int vector_X = target_CAM_X - centerX;
+			int vector_Y = centerY - target_CAM_Y;
+			cout << "vector_X : " << vector_X << " // vector_Y : " << vector_Y << endl;
+
+		}
+		Target_pt = Point(target_CAM_X, target_CAM_Y);
+
+		circle(img_color, Target_pt, 1, Scalar(0, 0, 255), 5);
+		line(img_color, Target_pt, Center_pt, Scalar(0, 0, 255), 2, 8, 0);
+
+		//Show
 		imshow("img_color", img_color);
 		imshow("img_mask", img_mask);
 		imshow("img_result", img_result);

@@ -3,6 +3,11 @@
 #include <opencv2/videoio.hpp>
 #include <opencv2/highgui.hpp>
 #include <iostream>
+#include <windows.h>
+#include <chrono>
+#include <thread>
+
+#include "serialcomm.h"
 
 #define MAX 255
 
@@ -20,6 +25,12 @@ Mat img_color;
 int target_CAM_X, target_CAM_Y;
 Point Target_pt, Center_pt;
 int centerX, centerY;
+int vector_X, vector_Y;
+
+CSerialComm serialComm;
+
+int Data_Size = 8;
+char Data[8] = { 0, };
 
 
 void mouse_callback(int event, int x, int y, int flags, void* param)
@@ -85,10 +96,42 @@ void mouse_callback(int event, int x, int y, int flags, void* param)
 		target_CAM_Y = y;
 	}
 }
+void Send_data(BYTE data) {
+
+	if (!serialComm.sendCommand(data))
+	{
+		printf("send command failed\n");
+	}
+
+}
+void Connect_Uart_Port(const char* _portNum) {
+	if (!serialComm.connect(_portNum))
+	{
+		cout << "connect faliled";
+		return;
+	}
+}
+void DisConnect_Uart_Port() {
+	serialComm.disconnect();
+}
+void Transfer_num_to_char(char* txDataBuf, int x_Temp, int y_Temp) {
+
+	
+	txDataBuf[0] = '#';
+	txDataBuf[1] = (x_Temp % 1000) / 100 + 48;
+	txDataBuf[2] = (x_Temp % 100) / 10 + 48;
+	txDataBuf[3] = (x_Temp % 10) + 48;
+	txDataBuf[4] = ',';
+	txDataBuf[5] = (y_Temp % 1000) / 100 + 48;
+	txDataBuf[6] = (y_Temp % 100) / 10 + 48;
+	txDataBuf[7] = (y_Temp % 10) + 48;
+}
 
 //main
 int main()
 {
+	Connect_Uart_Port("COM2");
+
 	namedWindow("img_color");
 	setMouseCallback("img_color", mouse_callback);
 	//Trackbar
@@ -96,10 +139,14 @@ int main()
 	setTrackbarPos("threshold", "img_color", 30);
 
 	Mat img_hsv;
+	Scalar red(0, 0, 255);
+	Scalar blue(255, 0, 0);
+	Scalar yellow(0, 255, 255);
 
 	VideoCapture cap(0, CAP_DSHOW);
 	cap.set(CV_CAP_PROP_FRAME_WIDTH, 720);
 	cap.set(CV_CAP_PROP_FRAME_HEIGHT, 720);
+
 	if (!cap.isOpened()) {
 		cout << "카메라를 열 수 없습니다." << endl;
 		return -1;
@@ -107,6 +154,8 @@ int main()
 
 	while (1)
 	{
+		std::chrono::system_clock::time_point StartTime = std::chrono::system_clock::now();
+
 		cap.read(img_color);
 
 		threshold1 = getTrackbarPos("threshold", "img_color");
@@ -140,37 +189,51 @@ int main()
 			centerY = centroids.at<double>(j, 1);
 
 			if (area > 8000) { // 조절 //특정 조건 이상
-				circle(img_color, Point(centerX, centerY), radius, Scalar(0, 0, 255), 5);
-				circle(img_color, Point(centerX, centerY), 1, Scalar(0, 0, 255), 5);
+				circle(img_color, Point(centerX, centerY), radius, red, 5);
+				circle(img_color, Point(centerX, centerY), 1, red, 5);
 
 
-				putText(img_color, "detected", Point(left, top), FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 0, 0), 1);
+				putText(img_color, "detected", Point(left, top), FONT_HERSHEY_SIMPLEX, 1, blue, 1);
 
-				/*cout << "Area : " << area << endl;
-				cout << "Center[x] : " << centerX << endl;
-				cout << "Center[y] : " << centerY << endl;*/
 				Center_pt = Point(centerX, centerY);
 			}
 
-			int vector_X = target_CAM_X - centerX;
-			int vector_Y = centerY - target_CAM_Y;
-			cout << "vector_X : " << vector_X << " // vector_Y : " << vector_Y << endl;
+			vector_X = target_CAM_X - centerX;
+			vector_Y = centerY - target_CAM_Y;
+
+			//cout << "vector_X : " << vector_X << " // vector_Y : " << vector_Y << endl;
 
 		}
+
+		//Data Sending
+		Transfer_num_to_char(Data, vector_X, vector_Y);
+		for (int i = 0; i < Data_Size; i++) {
+			Send_data(Data[i]);
+			//cout << Data[i] << endl;
+		}
+
+		//Target Point
 		Target_pt = Point(target_CAM_X, target_CAM_Y);
 
-		circle(img_color, Target_pt, 1, Scalar(0, 0, 255), 5);
-		line(img_color, Target_pt, Center_pt, Scalar(0, 0, 255), 2, 8, 0);
+		//graphics
+		circle(img_color, Target_pt, 1, red, 5);
+		line(img_color, Target_pt, Center_pt, red, 2, 8, 0);
 
 		//Show
 		imshow("img_color", img_color);
 		imshow("img_mask", img_mask);
-		imshow("img_result", img_result);
+		//imshow("img_result", img_result);
 
 		if (waitKey(1) > 0)
 			break;
+
+		std::chrono::system_clock::time_point EndTime = std::chrono::system_clock::now();
+
+		std::chrono::milliseconds mill = std::chrono::duration_cast<std::chrono::milliseconds>(EndTime - StartTime);
+		std::this_thread::sleep_for(0.05s - mill);  //제어주기 만드는 것 쓰레드를 sleep해서 지금은 0.05초 50ms
 	}
 
+	DisConnect_Uart_Port();
 
 	return 0;
 }

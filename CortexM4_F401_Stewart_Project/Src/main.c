@@ -74,9 +74,21 @@ uint16_t Tim5_ARR;
 //UART
 uint8_t Data;
 uint8_t rx_buff_temp[1];
-uint8_t rx_buff[8];
-uint8_t RX_BUFF_SIZE = 1;
-uint8_t buff_count;
+uint8_t RXbuffer[64];
+int RX_BUFF_SIZE = 1;
+//
+int start_i = 0;
+int End_i = 0;
+int cut_i = 0;
+int cut2_i = 0;
+char num1[20];
+char num2[20];
+char num3[20];
+int i = 0, j = 0;
+//Leg Length
+int L1_Size;
+int L2_Size;
+int L3_Size;
 
 /* USER CODE END PV */
 
@@ -155,14 +167,14 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
   
   if(htim == &htim9){
     cnt++;
-    Motor_cnt++;
-    TIM3->CCR1 = Motor1_CCR;
-    TIM4->CCR1 = Motor2_CCR;
-    TIM5->CCR1 = Motor3_CCR;
-    
-    Motor1_CCR = 100; 
-    Motor2_CCR = 100;
-    Motor3_CCR = 100;
+//    Motor_cnt++;
+//    TIM3->CCR1 = Motor1_CCR;
+//    TIM4->CCR1 = Motor2_CCR;
+//    TIM5->CCR1 = Motor3_CCR;
+//    
+//    Motor1_CCR = 100; 
+//    Motor2_CCR = 100;
+//    Motor3_CCR = 100;
   }
 }
 //External interrupt
@@ -175,10 +187,12 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
     if(drv_8825 == 0){ //set
       HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_9);
       HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_10);
+      HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_11);
     }
     else if(drv_8825 == 1){ //reset
       HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_9);
       HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_10);
+      HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_11);
     }
     //
   }
@@ -189,15 +203,48 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
   //UART6(PC to STM32)
   if(huart->Instance == USART6){
     
-    rx_buff[buff_count] = rx_buff_temp[0];
-    buff_count += 1;
-    if (buff_count == 8){
-      buff_count = 0; 
+    RXbuffer[i] = rx_buff_temp[0];
+    
+    if(RXbuffer[i] == 's') //시작 알림
+      start_i = i;
+    else if(RXbuffer[i] == ',') //구분
+      cut_i = i;
+    else if(RXbuffer[i] == '/')
+      cut2_i = i;
+    else if(RXbuffer[i] == 'e'){ //끝 알림
+      End_i = i;
+      RXbuffer[i + 1] = 0;
+      
+      for(i = start_i+1; i < cut_i; i++)
+        num1[j++] = RXbuffer[i];
+      num1[j] = '\0';
+      j = 0;
+      
+      for(i = cut_i+1; i < cut2_i; i++)
+        num2[j++] = RXbuffer[i];
+      num2[j] = '\0';
+      j = 0;
+      
+      for(i = cut2_i+1; i < End_i; i++)
+        num3[j++] = RXbuffer[i];
+      num3[j] = '\0';
+      j = 0;
+      
+      L1_Size = atoi(num1);
+      L2_Size = atoi(num2);
+      L3_Size = atoi(num3);
+      
+      i = 0;
+      
     }
-    HAL_UART_Receive_IT(&huart6, rx_buff_temp, RX_BUFF_SIZE); // 1바이트 수신
+    i++;
     
   }
+  
+  HAL_UART_Receive_IT(&huart6, rx_buff_temp, RX_BUFF_SIZE); // 1바이트 수신
+  
 }
+
 /* USER CODE END 0 */
 
 /**
@@ -246,6 +293,7 @@ int main(void)
   HAL_TIM_PWM_Start(&htim5, TIM_CHANNEL_1);
   HAL_TIMEx_PWMN_Start(&htim5, TIM_CHANNEL_1);
   
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET);
   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_RESET);
   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, GPIO_PIN_RESET);
@@ -258,6 +306,8 @@ int main(void)
   while (1)
   {
     Tim3_Clock_setup(10);
+    Tim4_Clock_setup(6400);
+    Tim5_Clock_setup(200);
     
     //Motor1
     //    if(Motor_cnt == 10000){
@@ -420,7 +470,7 @@ static void MX_TIM5_Init(void)
   htim5.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim5.Init.Period = 1000-1;
   htim5.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  if (HAL_TIM_OC_Init(&htim5) != HAL_OK)
+  if (HAL_TIM_PWM_Init(&htim5) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
   }
@@ -432,11 +482,11 @@ static void MX_TIM5_Init(void)
     _Error_Handler(__FILE__, __LINE__);
   }
 
-  sConfigOC.OCMode = TIM_OCMODE_TIMING;
-  sConfigOC.Pulse = 100;
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 0;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-  if (HAL_TIM_OC_ConfigChannel(&htim5, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  if (HAL_TIM_PWM_ConfigChannel(&htim5, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
   }
@@ -541,7 +591,8 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, LD2_Pin|GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_11, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, LD2_Pin|GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10 
+                          |GPIO_PIN_11, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2|GPIO_PIN_3, GPIO_PIN_RESET);
@@ -552,8 +603,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : LD2_Pin PA9 PA10 PA11 */
-  GPIO_InitStruct.Pin = LD2_Pin|GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_11;
+  /*Configure GPIO pins : LD2_Pin PA8 PA9 PA10 
+                           PA11 */
+  GPIO_InitStruct.Pin = LD2_Pin|GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10 
+                          |GPIO_PIN_11;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;

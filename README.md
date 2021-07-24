@@ -19,7 +19,7 @@ Stewart Platform은 모션 시뮬레이션에도 다양하게 사용되지만 �
 ### 4. 균형 제어(PID제어)  
 
 ## System Architecture
-<p align="center"><img src="https://user-images.githubusercontent.com/72693388/126869080-d2140588-1c6b-4774-b4ee-0a119c15cff7.png" width="600px"></p>   
+<p align="center"><img src="https://user-images.githubusercontent.com/72693388/126869080-d2140588-1c6b-4774-b4ee-0a119c15cff7.png" width="400px"></p>   
 
 ### Code Overview  
 - 

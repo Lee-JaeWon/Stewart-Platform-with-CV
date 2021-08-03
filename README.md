@@ -14,18 +14,30 @@ Stewart Platform은 모션 시뮬레이션에도 다양하게 사용되지만 �
 
 ## 프로젝트 개요
 ### 1. Computer vision (OpenCV)  
+- 화면 상에서 원하는 색을 선택 시(MouseEvent), 그 색상만 Detecting 하도록 구현  
+- 이를, 상단에 Threshold Bar를 삽입해 외부 조명이나 noise에 적합한 임계값을 찾도록 구현
+- 다른 마우스버튼 이벤트를 통해 원하는 곳을 선택 시, 그곳으로 공을 유지시키도록 하는 동작 구현
+- 카메라와 하드웨어의 Plate가 맞지 않는 상황 극복을 위해, 투시 변환 적용, 색 Detecting 전에 구역 설정
+
 ### 2. Inverse Kinematics of 3DOF Stewart Platform  
+- yaw, roll, pitch 중 yaw를 제외한 성분을 다루어야 하는 수식의 특성상 Eigen Library를 활용해 행렬곱 연산
+- 이를 통해, 각각의 다리 길이 도출
+
 ### 3. 하드웨어 설계 & 제작  
+- Autodesk사의 Inventor pro를 이용해 설계  
+- 3D 프린터로 출력
+
 ### 4. 균형 제어(PID제어)  
 
 ## System Architecture
 <p align="center"><img src="https://user-images.githubusercontent.com/72693388/126869080-d2140588-1c6b-4774-b4ee-0a119c15cff7.png" width="400px"></p>   
 
 ### Code Overview  
-- 
-- 
-- 
-- 
+- `main.cpp` : 영상처리(openCV)를 위한 system 중 main, Ball Detecting, 투시 변환 및 영상 처리를 위한 필터 적용 등의 구현 코드
+- `Matrix_calc.cpp`, `Matrix_calc.h` : 3DOF Stewart Platform의 역기구학 수식을 위한 행렬 연산 구현 코드
+- `serialcomm.cpp`, `serialcomm.h`, `serialport.cpp`, `serialport.h` : PC에서 MCU로의 시리얼 통신을 위한 코드(본인 작성 x)
+- `PID_Control.cpp`, `PID_Control.h` : PID제어를 위한 코드
+- `CortexM4_F401_Stewart_Project\Src\main.c` : Cortex-M4(STM32-F401)를 이용한 스텝모터 동작을 위한 코드
 
 ### Project scenario
 

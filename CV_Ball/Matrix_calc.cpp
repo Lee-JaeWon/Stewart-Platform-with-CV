@@ -54,18 +54,18 @@ void Matrix_ball::T_vector_Set(double vector_X, double vector_Y, const int Hard_
 	this->T_vector(0, 1) = vector_Y; //y
 	this->T_vector(0, 2) = Hard_height; //z
 }
-void Matrix_ball::P_vector_Set() { //하드웨어 스펙으로 체인지
-	this->P1_vector(0, 0) = 85;
-	this->P1_vector(0, 1) = 55;
-	this->P1_vector(0, 2) = 0;
-	this->P2_vector(0, 0) = -85;
-	this->P2_vector(0, 1) = 55;
-	this->P2_vector(0, 2) = 0;
-	this->P3_vector(0, 0) = 0;
-	this->P3_vector(0, 1) = -100;
-	this->P3_vector(0, 2) = 0;
+void Matrix_ball::P_vector_Set() {
+	this->P1_vector(0, 0) = 105; //85
+	this->P1_vector(0, 1) = 80; //55
+	this->P1_vector(0, 2) = 0; // 0 
+	this->P2_vector(0, 0) = -105; //-85
+	this->P2_vector(0, 1) = 80; //55
+	this->P2_vector(0, 2) = 0; // 0
+	this->P3_vector(0, 0) = 0; // 0
+	this->P3_vector(0, 1) = -112; // -100
+	this->P3_vector(0, 2) = 0; // 0
 }
-const void Matrix_ball::B_vector_Set() { //하드웨어 스펙으로 체인지
+const void Matrix_ball::B_vector_Set() {
 	this->B1_vector(0, 0) = 85;
 	this->B1_vector(0, 1) = 55;
 	this->B1_vector(0, 2) = 0;

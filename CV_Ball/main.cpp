@@ -58,10 +58,10 @@ Point2f srcQuad[4], dstQuad[4];
 int w = 600, h = 600;
 //Serial communication variables
 CSerialComm serialComm;
-int Data_Size = 13;
-char Data[13] = { 0, };
+int Data_Size = 10;
+char Data[10] = { 0, };
 //Hardware
-static int HardWare_height = 105; //mm
+static int HardWare_height = 120; //mm
 //////////////////////////////////////////////////////////////////////////////
 
 void mouse_callback(int event, int x, int y, int flags, void* param)
@@ -124,6 +124,7 @@ void mouse_callback(int event, int x, int y, int flags, void* param)
 	}
 
 	if (event == EVENT_MBUTTONDOWN) {
+		cout << "투시 변환 영역 선택 중..." << endl;
 		if (cnt < 4) {
 			srcQuad[cnt++] = Point2f(x, y); // 클릭한 좌표를 src배열에 저장
 
@@ -157,18 +158,15 @@ void DisConnect_Uart_Port() {
 void Transfer_num_to_char(char* txDataBuf, int lenght_1, int lenght_2, int lenght_3) {
 
 	txDataBuf[0] = 's';
-	txDataBuf[1] = (lenght_1 % 1000) / 100 + 48;
-	txDataBuf[2] = (lenght_1 % 100) / 10 + 48;
-	txDataBuf[3] = (lenght_1 % 10) + 48;
-	txDataBuf[4] = ',';
-	txDataBuf[5] = (lenght_2 % 1000) / 100 + 48;
-	txDataBuf[6] = (lenght_2 % 100) / 10 + 48;
-	txDataBuf[7] = (lenght_2 % 10) + 48;
-	txDataBuf[8] = '/';
-	txDataBuf[9] = (lenght_3 % 1000) / 100 + 48;
-	txDataBuf[10] = (lenght_3 % 100) / 10 + 48;
-	txDataBuf[11] = (lenght_3 % 10) + 48;
-	txDataBuf[12] = 'e';
+	txDataBuf[1] = (lenght_1 % 100) / 10 + 48;
+	txDataBuf[2] = (lenght_1 % 10) + 48;
+	txDataBuf[3] = ',';
+	txDataBuf[4] = (lenght_2 % 100) / 10 + 48;
+	txDataBuf[5] = (lenght_2 % 10) + 48;
+	txDataBuf[6] = '/';
+	txDataBuf[7] = (lenght_3 % 100) / 10 + 48;
+	txDataBuf[8] = (lenght_3 % 10) + 48;
+	txDataBuf[9] = 'e';
 
 }
 
@@ -244,7 +242,7 @@ int main()
 				int height = stats.at<int>(j, CC_STAT_HEIGHT);
 				int radius = height / 2;
 
-				if (area > 100) { // 조절 //특정 조건 이상
+				if (area > 1000) { // 조절 //특정 조건 이상
 
 					centerX = centroids.at<double>(j, 0);
 					centerY = centroids.at<double>(j, 1);
@@ -256,8 +254,8 @@ int main()
 
 					Center_pt = Point(centerX, centerY);
 				}
-				vector_X = (target_CAM_X - centerX) * 0.5;
-				vector_Y = ((-1) * (target_CAM_Y - centerY)) * 0.5;
+				vector_X = (target_CAM_X - centerX) * 0.41667;
+				vector_Y = ((-1) * (target_CAM_Y - centerY)) * 0.41667;
 
 
 			}
@@ -283,10 +281,10 @@ int main()
 			mxb.L2_Size = mxb.vector_size(mxb.L2_vector(0, 0), mxb.L2_vector(1, 0), mxb.L2_vector(2, 0));
 			mxb.L3_Size = mxb.vector_size(mxb.L3_vector(0, 0), mxb.L3_vector(1, 0), mxb.L3_vector(2, 0));
 
-			cout << (int)mxb.L1_Size << " // " << (int)mxb.L2_Size << " // " << (int)mxb.L3_Size << endl;
+			cout << (int)mxb.L1_Size / 10 << " // " << (int)mxb.L2_Size / 10 << " // " << (int)mxb.L3_Size / 10 << endl;
 			
 			//Data Sending
-			Transfer_num_to_char(Data, (int)mxb.L1_Size, (int)mxb.L2_Size, (int)mxb.L3_Size);
+			Transfer_num_to_char(Data, (int)mxb.L1_Size / 10, (int)mxb.L2_Size / 10, (int)mxb.L3_Size / 10);
 			for (int i = 0; i < Data_Size; i++) {
 				Send_data(Data[i]);
 			}

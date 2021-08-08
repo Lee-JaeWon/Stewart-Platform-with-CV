@@ -92,20 +92,16 @@ int L1_Size;
 int L2_Size;
 int L3_Size;
 //Calculation
-int Max_L_Size = 150;
+int Max_L_Size = 1000;
 int default_L_Size = 84; // 100mm
 const int first_joint_Size = 80;
 const int second_joint_Size = 74;
 GPIO_PinState pin_state1;
 GPIO_PinState pin_state2;
 GPIO_PinState pin_state3;
-int pre_l1_size =15;
-int pre_l2_size =15;
-int pre_l3_size =15;
-int target1,target2,target3;
-int flag = 0;
-
-
+int Motor_speed = 105;
+int a = 600;
+int b = 3;
 
 /* USER CODE END PV */
 
@@ -176,6 +172,11 @@ void Tim5_Clock_setup(int pulse){
     TIM5->PSC = Tim5_prescaler;
     TIM5->ARR = Tim5_ARR;
   }
+}
+void Tim_Clock_All_setup(int pulse){
+  Tim3_Clock_setup(pulse);
+  Tim4_Clock_setup(pulse);
+  Tim5_Clock_setup(pulse);
 }
 //Timer interrupt
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
@@ -311,144 +312,315 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {     
-    if(cnt == 50){
+    
+    if(cnt == 500){     
+      pin_state1 = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_9);
+      pin_state2 = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_10);
+      pin_state3 = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_11);
       
-      //Leg1;
-      target1 = pre_l1_size - L1_Size;
-      pre_l1_size = L1_Size;
-      pin_state1 = HAL_GPIO_ReadPin(GPIOE, GPIO_PIN_9);
-      
-      if(target1 < 0){ //target 값 음수 // 위로 올라가야함
-        if(pin_state1 == 0){ //상승 모드
-          if(L1_Size > 25){ // 25보다 클때
-            Tim3_Clock_setup(0); //stop
-          }
-          else{ //25보다 작을때
-            Tim3_Clock_setup((int)((target1*(-1))*10)); // 상승
-          }
-        }
-        else if(pin_state1 == 1){ //하강 모드 -> 상승모드
-          if(L1_Size > 25){ // 25보다 클때
-            Tim3_Clock_setup(0); //stop
-          }
-          else{
+      if((abs(L1_Size - L2_Size)) >= 0 && (abs(L1_Size - L2_Size)) <= 2){
+        if(L1_Size > L3_Size && L2_Size > L3_Size){
+          Tim5_Clock_setup(0);
+          if(pin_state1 == 0 && pin_state2 == 0){
+            Tim3_Clock_setup(Motor_speed);
+            Tim4_Clock_setup(Motor_speed);
+            HAL_Delay(a);
             HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_9);
-            Tim3_Clock_setup((int)((target1*(-1))*10));
-          }
-        }
-      }
-      else if(target1 > 0){ //target 값 양수 // 내려가야함
-        if(pin_state1 == 0){ // 상승 모드 -> 하강 모드
-          if( L1_Size < 8 ){ // 8보다 작을때
-            Tim3_Clock_setup(0); //Stop
-          }
-          else{
-            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_9); //Toggle pin
-            Tim3_Clock_setup((int)(target1*10));
-          }
-        }
-        else if(pin_state1 == 1){ // 하강 모드
-          if( L1_Size < 8 ){ // 8보다 작을때
-            Tim3_Clock_setup(0); //Stop
-          }
-          else{
-            Tim3_Clock_setup((int)(target1*10));
-          }
-        }
-      }
-      
-      //Leg2;
-      target2 = pre_l2_size - L2_Size;
-      pre_l2_size = L2_Size;
-      pin_state2 = HAL_GPIO_ReadPin(GPIOE, GPIO_PIN_10);
-      
-      if(target2 < 0){ //target 값 음수 // 위로 올라가야함
-        if(pin_state2 == 0){ //상승 모드
-          if(L2_Size > 25){ // 25보다 클때
-            Tim4_Clock_setup(0); //stop
-          }
-          else{ //25보다 작을때
-            Tim4_Clock_setup((int)((target2*(-1))*10)); // 상승
-          }
-        }
-        else if(pin_state2 == 1){ //하강 모드 -> 상승모드
-          if(L2_Size > 25){ // 25보다 클때
-            Tim4_Clock_setup(0); //stop
-          }
-          else{
             HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_10);
-            Tim3_Clock_setup((int)((target2*(-1))*10));
+            Tim3_Clock_setup(Motor_speed);
+            Tim4_Clock_setup(Motor_speed);
+            HAL_Delay(a);
+            Tim_Clock_All_setup(0);
+            HAL_Delay(b);
+          }else if(pin_state1 == 0 && pin_state2 == 1){
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_10);
+            Tim3_Clock_setup(Motor_speed);
+            Tim4_Clock_setup(Motor_speed);
+            HAL_Delay(a);
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_9);
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_10);
+            Tim3_Clock_setup(Motor_speed);
+            Tim4_Clock_setup(Motor_speed);
+            HAL_Delay(a);
+            Tim_Clock_All_setup(0);
+            HAL_Delay(b);
+          }else if(pin_state1 == 1 && pin_state2 == 0){
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_9);
+            Tim3_Clock_setup(Motor_speed);
+            Tim4_Clock_setup(Motor_speed);
+            HAL_Delay(a);
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_9);
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_10);
+            Tim3_Clock_setup(Motor_speed);
+            Tim4_Clock_setup(Motor_speed);
+            HAL_Delay(a);
+            Tim_Clock_All_setup(0);
+            HAL_Delay(b);
+          }else if(pin_state1 == 1 && pin_state2 == 1){
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_9);
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_10);
+            Tim3_Clock_setup(Motor_speed);
+            Tim4_Clock_setup(Motor_speed);
+            HAL_Delay(a);
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_9);
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_10);
+            Tim3_Clock_setup(Motor_speed);
+            Tim4_Clock_setup(Motor_speed);
+            HAL_Delay(a);
+            Tim_Clock_All_setup(0);
+            HAL_Delay(b);
           }
         }
-      }
-      else if(target2 > 0){ //target 값 양수 // 내려가야함
-        if(pin_state2 == 0){ // 상승 모드 -> 하강 모드
-          if( L2_Size < 8 ){ // 8보다 작을때
-            Tim4_Clock_setup(0); //Stop
-          }
-          else{
-            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_10); //Toggle pin
-            Tim4_Clock_setup((int)(target2*10));
-          }
-        }
-        else if(pin_state2 == 1){ // 하강 모드
-          if( L2_Size < 8 ){ // 8보다 작을때
-            Tim4_Clock_setup(0); //Stop
-          }
-          else{
-            Tim4_Clock_setup((int)(target2*10));
-          }
-        }
-      }
-      
-      
-      //Leg3;
-      target3 = pre_l3_size - L3_Size;
-      pre_l3_size = L3_Size;
-      pin_state3 = HAL_GPIO_ReadPin(GPIOE, GPIO_PIN_11);
-      
-      if(target3 < 0){ //target 값 음수 // 위로 올라가야함
-        if(pin_state3 == 0){ //상승 모드
-          if(L3_Size > 25){ // 25보다 클때
-            Tim5_Clock_setup(0); //stop
-          }
-          else{ //25보다 작을때
-            Tim5_Clock_setup((int)((target3*(-1))*10)); // 상승
-          }
-        }
-        else if(pin_state3 == 1){ //하강 모드 -> 상승모드
-          if(L3_Size > 25){ // 25보다 클때
-            Tim5_Clock_setup(0); //stop
-          }
-          else{
+        else if(L3_Size > L1_Size && L3_Size > L2_Size){
+          Tim3_Clock_setup(0);
+          Tim4_Clock_setup(0);
+          if(pin_state3 == 0){
+            Tim5_Clock_setup(Motor_speed);
+            HAL_Delay(a);
             HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_11);
-            Tim5_Clock_setup((int)((target3*(-1))*10));
+            Tim5_Clock_setup(Motor_speed);
+            HAL_Delay(a);
+            Tim_Clock_All_setup(0);
+            HAL_Delay(b);
+          }else if(pin_state3 == 1){
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_11);
+            Tim5_Clock_setup(Motor_speed);
+            HAL_Delay(a);
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_11);
+            Tim5_Clock_setup(Motor_speed);
+            HAL_Delay(a);
+            Tim_Clock_All_setup(0);
+            HAL_Delay(b);
           }
         }
       }
-      else if(target3 > 0){ //target 값 양수 // 내려가야함
-        if(pin_state3 == 0){ // 상승 모드 -> 하강 모드
-          if( L3_Size < 8 ){ // 8보다 작을때
-            Tim5_Clock_setup(0); //Stop
-          }
-          else{
-            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_11); //Toggle pin
-            Tim5_Clock_setup((int)(target3*10));
+      else if((abs(L2_Size - L3_Size)) >= 0 && (abs(L2_Size - L3_Size)) <= 2){
+        if(L2_Size > L1_Size && L3_Size > L1_Size){
+          Tim3_Clock_setup(0); // 3번 안움직임
+          if(pin_state2 == 0 && pin_state3 == 0){
+            Tim4_Clock_setup(Motor_speed);
+            Tim5_Clock_setup(Motor_speed);
+            HAL_Delay(a);
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_10);
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_11);
+            Tim4_Clock_setup(Motor_speed);
+            Tim5_Clock_setup(Motor_speed);
+            HAL_Delay(a);
+            Tim_Clock_All_setup(0);
+            HAL_Delay(b);
+          }else if(pin_state2 == 0 && pin_state3 == 1){
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_11);
+            Tim4_Clock_setup(Motor_speed);
+            Tim5_Clock_setup(Motor_speed);
+            HAL_Delay(a);
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_10);
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_11);
+            Tim4_Clock_setup(Motor_speed);
+            Tim5_Clock_setup(Motor_speed);
+            HAL_Delay(a);
+            Tim_Clock_All_setup(0);
+            HAL_Delay(b);
+          }else if(pin_state2 == 1 && pin_state3 == 0){
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_10);
+            Tim4_Clock_setup(Motor_speed);
+            Tim5_Clock_setup(Motor_speed);
+            HAL_Delay(a);
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_10);
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_11);
+            Tim4_Clock_setup(Motor_speed);
+            Tim5_Clock_setup(Motor_speed);
+            HAL_Delay(a);
+            Tim_Clock_All_setup(0);
+            HAL_Delay(b);
+          }else if(pin_state2 == 1 && pin_state3 == 1){
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_10);
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_11);
+            Tim4_Clock_setup(Motor_speed);
+            Tim5_Clock_setup(Motor_speed);
+            HAL_Delay(a);
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_10);
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_11);
+            Tim4_Clock_setup(Motor_speed);
+            Tim5_Clock_setup(Motor_speed);
+            HAL_Delay(a);
+            Tim_Clock_All_setup(0);
+            HAL_Delay(b);
           }
         }
-        else if(pin_state3 == 1){ // 하강 모드
-          if( L3_Size < 8 ){ // 8보다 작을때
-            Tim5_Clock_setup(0); //Stop
-          }
-          else{
-            Tim5_Clock_setup((int)(target3*10));
+        else if(L1_Size > L2_Size && L1_Size > L3_Size){
+          Tim4_Clock_setup(0);
+          Tim5_Clock_setup(0);
+          if(pin_state1 == 0){
+            Tim3_Clock_setup(Motor_speed);
+            HAL_Delay(a);
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_9);
+            Tim3_Clock_setup(Motor_speed);
+            HAL_Delay(a);
+            Tim_Clock_All_setup(0);
+            HAL_Delay(b);
+          }else if(pin_state1 == 1){
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_9);
+            Tim3_Clock_setup(Motor_speed);
+            HAL_Delay(a);
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_9);
+            Tim3_Clock_setup(Motor_speed);
+            HAL_Delay(a);
+            Tim_Clock_All_setup(0);
+            HAL_Delay(b);
           }
         }
-      }   
+      }
+      else if((abs(L1_Size - L3_Size)) >= 0 && (abs(L1_Size - L3_Size)) <= 2){
+        if(L3_Size > L2_Size && L1_Size > L2_Size){
+          Tim4_Clock_setup(0);
+          if(pin_state1 == 0 && pin_state3 == 0){
+            Tim3_Clock_setup(Motor_speed);
+            Tim5_Clock_setup(Motor_speed);
+            HAL_Delay(a);
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_9);
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_11);
+            Tim3_Clock_setup(Motor_speed);
+            Tim5_Clock_setup(Motor_speed);
+            HAL_Delay(a);
+            Tim_Clock_All_setup(0);
+            HAL_Delay(b);
+          }else if(pin_state1 == 0 && pin_state3 == 1){
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_11);
+            Tim3_Clock_setup(Motor_speed);
+            Tim5_Clock_setup(Motor_speed);
+            HAL_Delay(a);
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_9);
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_11);
+            Tim3_Clock_setup(Motor_speed);
+            Tim5_Clock_setup(Motor_speed);
+            HAL_Delay(a);
+            Tim_Clock_All_setup(0);
+            HAL_Delay(b);
+          }else if(pin_state1 == 1 && pin_state3 == 0){
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_9);
+            Tim3_Clock_setup(Motor_speed);
+            Tim5_Clock_setup(Motor_speed);
+            HAL_Delay(a);
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_9);
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_11);
+            Tim3_Clock_setup(Motor_speed);
+            Tim5_Clock_setup(Motor_speed);
+            HAL_Delay(a);
+            Tim_Clock_All_setup(0);
+            HAL_Delay(b);
+          }else if(pin_state1 == 1 && pin_state3 == 1){
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_9);
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_11);
+            Tim3_Clock_setup(Motor_speed);
+            Tim5_Clock_setup(Motor_speed);
+            HAL_Delay(a);
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_9);
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_11);
+            Tim3_Clock_setup(Motor_speed);
+            Tim5_Clock_setup(Motor_speed);
+            HAL_Delay(a);
+            Tim_Clock_All_setup(0);
+            HAL_Delay(b);
+          }
+        }
+        else if(L2_Size > L1_Size && L2_Size > L3_Size){
+          Tim3_Clock_setup(0);
+          Tim5_Clock_setup(0);
+          if(pin_state2 == 0){
+            Tim4_Clock_setup(Motor_speed);
+            HAL_Delay(a);
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_10);
+            Tim4_Clock_setup(Motor_speed);
+            HAL_Delay(a);
+            Tim_Clock_All_setup(0);
+            HAL_Delay(b);
+          }else if(pin_state2 == 1){
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_10);
+            Tim4_Clock_setup(Motor_speed);
+            HAL_Delay(a);
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_10);
+            Tim4_Clock_setup(Motor_speed);
+            HAL_Delay(a);
+            Tim_Clock_All_setup(0);
+            HAL_Delay(b);
+          }
+        }
+      }
+      else if(L1_Size > L2_Size && L1_Size > L3_Size){
+        Tim4_Clock_setup(0);
+        Tim5_Clock_setup(0);
+        if(pin_state1 == 0){
+          Tim3_Clock_setup(Motor_speed);
+          HAL_Delay(a);
+          HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_9);
+          Tim3_Clock_setup(Motor_speed);
+          HAL_Delay(a);
+          Tim_Clock_All_setup(0);
+          HAL_Delay(b);
+        }else if(pin_state1 == 1){
+          HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_9);
+          Tim3_Clock_setup(Motor_speed);
+          HAL_Delay(a);
+          HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_9);
+          Tim3_Clock_setup(Motor_speed);
+          HAL_Delay(a);
+          Tim_Clock_All_setup(0);
+          HAL_Delay(b);
+        }
+      }
+      else if(L2_Size > L1_Size && L2_Size > L3_Size){
+        Tim3_Clock_setup(0);
+        Tim5_Clock_setup(0);
+        if(pin_state2 == 0){
+          Tim4_Clock_setup(Motor_speed);
+          HAL_Delay(a);
+          HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_10);
+          Tim4_Clock_setup(Motor_speed);
+          HAL_Delay(a);
+          Tim_Clock_All_setup(0);
+          HAL_Delay(b);
+        }else if(pin_state2 == 1){
+          HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_10);
+          Tim4_Clock_setup(Motor_speed);
+          HAL_Delay(a);
+          HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_10);
+          Tim4_Clock_setup(Motor_speed);
+          HAL_Delay(a);
+          Tim_Clock_All_setup(0);
+          HAL_Delay(b);
+        }
+      }
+      else if(L3_Size > L1_Size && L3_Size > L2_Size){
+        Tim3_Clock_setup(0);
+        Tim4_Clock_setup(0);
+        if(pin_state3 == 0){
+          Tim5_Clock_setup(Motor_speed);
+          HAL_Delay(a);
+          HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_11);
+          Tim5_Clock_setup(Motor_speed);
+          HAL_Delay(a);
+          Tim_Clock_All_setup(0);
+          HAL_Delay(b);
+        }else if(pin_state3 == 1){
+          HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_11);
+          Tim5_Clock_setup(Motor_speed);
+          HAL_Delay(a);
+          HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_11);
+          Tim5_Clock_setup(Motor_speed);
+          HAL_Delay(a);
+          Tim_Clock_All_setup(0);
+          HAL_Delay(b);
+        }
+      }
+      else if(L1_Size == L2_Size && L2_Size == L3_Size){
+        Tim_Clock_All_setup(0);
+      }
+      else if(abs(L1_Size - L2_Size) < 3 && abs(L2_Size - L3_Size) < 3 && abs(L1_Size - L3_Size) < 3){
+        Tim_Clock_All_setup(0);
+      }
       
       cnt = 0;
     }
-    
     
     /* USER CODE END WHILE */
     

@@ -123,23 +123,22 @@ void mouse_callback(int event, int x, int y, int flags, void* param)
 		target_CAM_Y = y;
 	}
 
-	if (event == EVENT_MBUTTONDOWN) {
-		cout << "투시 변환 영역 선택 중..." << endl;
-		if (cnt < 4) {
-			srcQuad[cnt++] = Point2f(x, y); // 클릭한 좌표를 src배열에 저장
+	//if (event == EVENT_MBUTTONDOWN) {
+	//	cout << "투시 변환 영역 선택 중..." << endl;
+	//	if (cnt < 4) {
+	//		srcQuad[cnt++] = Point2f(x, y); // 클릭한 좌표를 src배열에 저장
 
-			circle(img_change, Point(x, y), 1, red, 5); //빨간색 원
+	//		circle(img_change, Point(x, y), 1, red, 5); //빨간색 원
 
-			if (cnt == 4) {
-				dstQuad[0] = Point2f(0, 0); // 결과 영상 좌표
-				dstQuad[1] = Point2f(w - 1, 0);
-				dstQuad[2] = Point2f(w - 1, h - 1);
-				dstQuad[3] = Point2f(0, h - 1);
-			}
-		}
-	}
+	//		if (cnt == 4) {
+	//			dstQuad[0] = Point2f(0, 0); // 결과 영상 좌표
+	//			dstQuad[1] = Point2f(w - 1, 0);
+	//			dstQuad[2] = Point2f(w - 1, h - 1);
+	//			dstQuad[3] = Point2f(0, h - 1);
+	//		}
+	//	}
+	//}
 }
-
 void Send_data(BYTE data) {
 	if (!serialComm.sendCommand(data)) {
 		//printf("send command failed\n");
@@ -200,105 +199,93 @@ int main()
 	if (!cap.isOpened()) {
 		cout << "카메라를 열 수 없습니다." << endl;
 		return -1;
-	}else cout << intro << endl;
+	}
+	else cout << intro << endl;
 
 	while (1) {
 
 		//std::chrono::system_clock::time_point StartTime = std::chrono::system_clock::now();
 
-		cap.read(img_change);
-		if (cnt < 4) {
-			setMouseCallback("img_change", mouse_callback);
-			imshow("img_change", img_change);
-		}
-		
-		if (cnt == 4) {
-			Mat pers = getPerspectiveTransform(srcQuad, dstQuad);
-			warpPerspective(img_change, img_color, pers, Size(w, h));
-			destroyWindow("img_change");
-		}
+		cap.read(img_color);
 
-		if (cnt == 4) {
-			threshold1 = getTrackbarPos("threshold", "img_color");
+		threshold1 = getTrackbarPos("threshold", "img_color");
 
-			cvtColor(img_color, img_hsv, COLOR_BGR2HSV);
+		cvtColor(img_color, img_hsv, COLOR_BGR2HSV);
 
-			inRange(img_hsv, lower_blue1, upper_blue1, img_mask1);
-			inRange(img_hsv, lower_blue2, upper_blue2, img_mask2);
-			inRange(img_hsv, lower_blue3, upper_blue3, img_mask3);
-			img_mask = img_mask1 | img_mask2 | img_mask3;
+		inRange(img_hsv, lower_blue1, upper_blue1, img_mask1);
+		inRange(img_hsv, lower_blue2, upper_blue2, img_mask2);
+		inRange(img_hsv, lower_blue3, upper_blue3, img_mask3);
+		img_mask = img_mask1 | img_mask2 | img_mask3;
 
-			bitwise_and(img_color, img_color, img_result, img_mask);
+		bitwise_and(img_color, img_color, img_result, img_mask);
 
-			//Labeling
-			int numOfLables = connectedComponentsWithStats(img_mask, img_labels, stats, centroids, 8, CV_32S);
+		//Labeling
+		int numOfLables = connectedComponentsWithStats(img_mask, img_labels, stats, centroids, 8, CV_32S);
 
-			//레이블링 결과
-			for (int j = 1; j < numOfLables; j++) {
-				int area = stats.at<int>(j, CC_STAT_AREA);
-				int left = stats.at<int>(j, CC_STAT_LEFT);
-				int top = stats.at<int>(j, CC_STAT_TOP);
-				int width = stats.at<int>(j, CC_STAT_WIDTH);
-				int height = stats.at<int>(j, CC_STAT_HEIGHT);
-				int radius = height / 2;
+		//레이블링 결과
+		for (int j = 1; j < numOfLables; j++) {
+			int area = stats.at<int>(j, CC_STAT_AREA);
+			int left = stats.at<int>(j, CC_STAT_LEFT);
+			int top = stats.at<int>(j, CC_STAT_TOP);
+			int width = stats.at<int>(j, CC_STAT_WIDTH);
+			int height = stats.at<int>(j, CC_STAT_HEIGHT);
+			int radius = height / 2;
 
-				if (area > 1000) { // 조절 //특정 조건 이상
+			if (area > 4000) { // 조절 //특정 조건 이상
 
-					centerX = centroids.at<double>(j, 0);
-					centerY = centroids.at<double>(j, 1);
+				centerX = centroids.at<double>(j, 0);
+				centerY = centroids.at<double>(j, 1);
 
-					circle(img_color, Point(centerX, centerY), radius, red, 5);
-					circle(img_color, Point(centerX, centerY), 1, red, 5);
+				circle(img_color, Point(centerX, centerY), radius, red, 5);
+				circle(img_color, Point(centerX, centerY), 1, red, 5);
 
-					putText(img_color, "Detecting", Point(left, top), FONT_HERSHEY_SIMPLEX, 1, blue, 1);
+				putText(img_color, "Detecting", Point(left, top), FONT_HERSHEY_SIMPLEX, 1, blue, 1);
 
-					Center_pt = Point(centerX, centerY);
-				}
-				vector_X = (target_CAM_X - centerX) * 0.41667;
-				vector_Y = ((-1) * (target_CAM_Y - centerY)) * 0.41667;
-
-
+				Center_pt = Point(centerX, centerY);
 			}
-			////PID Control
-			//long length = sqrt(vector_X * vector_X + vector_Y * vector_Y);
-			//PID_SET.PID_Control_long(0, length);
-			//vector_X = sqrt((length * length) - (vector_Y * vector_Y));
-			//vector_Y = sqrt((length * length) - (vector_X * vector_X));
+			vector_X = (target_CAM_X - centerX) * 0.46875;
+			vector_Y = ((-1) * (target_CAM_Y - centerY)) * 0.625;
 
-			//Matrix
-			mxb.find_theta(vector_X, HardWare_height);
-			mxb.find_phi(vector_Y, HardWare_height);
-			mxb.BR_p_Set();
-			mxb.P_vector_Set();
-			mxb.B_vector_Set();
-			mxb.T_vector_Set(vector_X, vector_Y, HardWare_height);
-
-			mxb.L1_vector = mxb.T_vector.transpose() + (mxb.BR_p * mxb.P1_vector.transpose()) - mxb.B1_vector.transpose();
-			mxb.L2_vector = mxb.T_vector.transpose() + (mxb.BR_p * mxb.P2_vector.transpose()) - mxb.B2_vector.transpose();
-			mxb.L3_vector = mxb.T_vector.transpose() + (mxb.BR_p * mxb.P3_vector.transpose()) - mxb.B3_vector.transpose();
-
-			mxb.L1_Size = mxb.vector_size(mxb.L1_vector(0, 0), mxb.L1_vector(1, 0), mxb.L1_vector(2, 0));
-			mxb.L2_Size = mxb.vector_size(mxb.L2_vector(0, 0), mxb.L2_vector(1, 0), mxb.L2_vector(2, 0));
-			mxb.L3_Size = mxb.vector_size(mxb.L3_vector(0, 0), mxb.L3_vector(1, 0), mxb.L3_vector(2, 0));
-
-			cout << (int)mxb.L1_Size / 10 << " // " << (int)mxb.L2_Size / 10 << " // " << (int)mxb.L3_Size / 10 << endl;
-			
-			//Data Sending
-			Transfer_num_to_char(Data, (int)mxb.L1_Size / 10, (int)mxb.L2_Size / 10, (int)mxb.L3_Size / 10);
-			for (int i = 0; i < Data_Size; i++) {
-				Send_data(Data[i]);
-			}
-
-			//Target Point
-			Target_pt = Point(target_CAM_X, target_CAM_Y);
-
-			//graphics
-			circle(img_color, Target_pt, 1, red, 5);
-			line(img_color, Target_pt, Center_pt, red, 2, 8, 0);
-
-			//Show
-			imshow("img_color", img_color);
 		}
+		////PID Control
+		//long length = sqrt(vector_X * vector_X + vector_Y * vector_Y);
+		//PID_SET.PID_Control_long(0, length);
+		//vector_X = sqrt((length * length) - (vector_Y * vector_Y));
+		//vector_Y = sqrt((length * length) - (vector_X * vector_X));
+
+		//Matrix
+		mxb.find_theta(vector_X, HardWare_height);
+		mxb.find_phi(vector_Y, HardWare_height);
+		mxb.BR_p_Set();
+		mxb.P_vector_Set();
+		mxb.B_vector_Set();
+		mxb.T_vector_Set(vector_X, vector_Y, HardWare_height);
+
+		mxb.L1_vector = mxb.T_vector.transpose() + (mxb.BR_p * mxb.P1_vector.transpose()) - mxb.B1_vector.transpose();
+		mxb.L2_vector = mxb.T_vector.transpose() + (mxb.BR_p * mxb.P2_vector.transpose()) - mxb.B2_vector.transpose();
+		mxb.L3_vector = mxb.T_vector.transpose() + (mxb.BR_p * mxb.P3_vector.transpose()) - mxb.B3_vector.transpose();
+
+		mxb.L1_Size = mxb.vector_size(mxb.L1_vector(0, 0), mxb.L1_vector(1, 0), mxb.L1_vector(2, 0));
+		mxb.L2_Size = mxb.vector_size(mxb.L2_vector(0, 0), mxb.L2_vector(1, 0), mxb.L2_vector(2, 0));
+		mxb.L3_Size = mxb.vector_size(mxb.L3_vector(0, 0), mxb.L3_vector(1, 0), mxb.L3_vector(2, 0));
+
+		cout << (int)mxb.L1_Size / 10 << " // " << (int)mxb.L2_Size / 10 << " // " << (int)mxb.L3_Size / 10 << endl;
+
+		//Data Sending
+		Transfer_num_to_char(Data, (int)mxb.L1_Size / 10, (int)mxb.L2_Size / 10, (int)mxb.L3_Size / 10);
+		for (int i = 0; i < Data_Size; i++) {
+			Send_data(Data[i]);
+		}
+
+		//Target Point
+		Target_pt = Point(target_CAM_X, target_CAM_Y);
+
+		//graphics
+		circle(img_color, Target_pt, 1, red, 5);
+		line(img_color, Target_pt, Center_pt, red, 2, 8, 0);
+
+		//Show
+		imshow("img_color", img_color);
 
 		if (waitKey(1) > 0)
 			break;
